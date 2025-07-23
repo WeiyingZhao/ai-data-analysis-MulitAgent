@@ -6,12 +6,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from typing import Annotated, List
 from bs4 import BeautifulSoup
-from dotenv import load_dotenv
 from logger import setup_logger
-
-# Load environment variables from .env file
-load_dotenv()
-
+from load_cfg import FIRECRAWL_API_KEY,CHROMEDRIVER_PATH
 # Set up logger
 logger = setup_logger()
 
@@ -37,7 +33,7 @@ def google_search(query: Annotated[str, "The search query to use"]) -> str:
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
-        service = Service(os.getenv('CHROMEDRIVER_PATH', './chromedriver/chromedriver'))
+        service = Service(CHROMEDRIVER_PATH)
 
         with webdriver.Chrome(options=chrome_options, service=service) as driver:
             url = f"https://www.google.com/search?q={query}"
@@ -62,7 +58,6 @@ def google_search(query: Annotated[str, "The search query to use"]) -> str:
     except Exception as e:
         logger.error(f"Error during Google search: {str(e)}")
         return f'Error: {e}'
-
 @tool
 def scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape"]) -> str:
     """
@@ -88,8 +83,7 @@ def scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape"]) -> str
         return content
     except Exception as e:
         logger.error(f"Error during webpage scraping: {str(e)}")
-        return f'Error: {e}'
-
+        raise  # Re-raise the exception to be caught by the calling function
 @tool
 def FireCrawl_scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape"]) -> str:
     """
@@ -104,12 +98,15 @@ def FireCrawl_scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape
     Any: The result of the FireCrawlLoader's load operation.
 
     Raises:
-    Exception: If there's an error during the scraping process.
+    Exception: If there's an error during the scraping process or if the API key is not set.
     """
+    if not FIRECRAWL_API_KEY:
+        raise ValueError("FireCrawl API key is not set")
+
     try:
         logger.info(f"Scraping webpages using FireCrawl: {urls}")
         loader = FireCrawlLoader(
-            api_key=os.getenv('FIRECRAWL_API_KEY'),
+            api_key=FIRECRAWL_API_KEY,
             url=urls,
             mode="scrape"
         )
@@ -118,6 +115,26 @@ def FireCrawl_scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape
         return result
     except Exception as e:
         logger.error(f"Error during FireCrawl scraping: {str(e)}")
-        return f"Error: {e}"
+        raise  # Re-raise the exception to be caught by the calling function
+@tool
+def scrape_webpages_with_fallback(urls: Annotated[List[str], "List of URLs to scrape"]) -> str:
+    """
+    Attempt to scrape webpages using FireCrawl, falling back to WebBaseLoader if unsuccessful.
+
+    Args:
+    urls (List[str]): A list of URLs to scrape.
+
+    Returns:
+    str: The scraped content from either FireCrawl or WebBaseLoader.
+    """
+    try:
+        return FireCrawl_scrape_webpages(urls)
+    except Exception as e:
+        logger.warning(f"FireCrawl scraping failed: {str(e)}. Falling back to WebBaseLoader.")
+        try:
+            return scrape_webpages(urls)
+        except Exception as e:
+            logger.error(f"Both scraping methods failed. Error: {str(e)}")
+            return f"Error: Unable to scrape webpages using both methods. {str(e)}"
 
 logger.info("Web scraping tools initialized")
