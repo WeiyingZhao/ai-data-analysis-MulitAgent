@@ -110,6 +110,11 @@ LANGCHAIN_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 ## Usage
 
+1. Start Jupyter Notebook *(optional)*.
+2. Place your data file (e.g., `data.csv`) in `data_storage`.
+3. **Notebook workflow**: open `main.ipynb`, run all cells, and modify `userInput` in the last cell to start the analysis.
+4. **CLI workflow**: run `python workflow.py "your research instructions"` to execute the entire process from the command line.
+=======
 ### Using Jupyter Notebook
 
 1. Start Jupyter Notebook:
@@ -167,6 +172,7 @@ The system uses LangGraph to create a state graph that manages the entire resear
 ## Customization
 
 You can customize the system behavior by modifying the agent creation and workflow definition in `main.ipynb`.
+All agent prompts are stored in the `prompts/` directory for easier editing.
 
 ## Notes
 
